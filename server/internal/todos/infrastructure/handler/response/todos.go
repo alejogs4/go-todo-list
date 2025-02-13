@@ -34,9 +34,9 @@ func FromTodoToResponse(todo domain.Todo) TodoResponse {
 		ID:          todo.ID,
 		Title:       todo.Title,
 		Completed:   todo.Completed,
-		CreatedAt:   todo.CreatedAt.Format(timeLayout),
+		CreatedAt:   todo.CreatedAt.Format(time.DateTime),
 		CompletedAt: formatCompletedAt(todo.CompletedAt),
-		UpdatedAt:   todo.UpdatedAt.Format(timeLayout),
+		UpdatedAt:   todo.UpdatedAt.Format(time.DateTime),
 	}
 }
 
@@ -45,7 +45,7 @@ func formatCompletedAt(completedAt *time.Time) *string {
 		return nil
 	}
 
-	completedAtString := completedAt.Format(timeLayout)
+	completedAtString := completedAt.Format(time.DateTime)
 
 	return &completedAtString
 }

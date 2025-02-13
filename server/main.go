@@ -5,7 +5,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
+	"go-todo-list.com/m/internal"
 	"go-todo-list.com/m/internal/shared/database"
 	"go-todo-list.com/m/internal/shared/logger"
 	"go-todo-list.com/m/internal/shared/uuid"
@@ -30,7 +32,7 @@ func main() {
 	todoRepository := persistance.NewTodosPostgresRepository(databaseConnection)
 	todoAuditRepository := persistance.NewTodoAuditRepositoryDecorator(todoRepository, auditRepository, appLogger)
 
-	server := SetupServer(todoAuditRepository, auditRepository, uuid.UUIDGenerator{})
+	server := internal.SetupServer(todoAuditRepository, auditRepository, uuid.UUIDGenerator{})
 
 	err = http.ListenAndServe(fmt.Sprintf(":%s", os.Getenv("HTTP_PORT")), server)
 	if err != nil {
@@ -39,9 +41,18 @@ func main() {
 }
 
 func getDatabaseParamsFromEnv() database.DatabaseConnection {
+	port := 5432
+	if os.Getenv("DB_PORT") != "" {
+		if portInt, err := strconv.Atoi(os.Getenv("DB_PORT")); err == nil {
+			port = portInt
+		}
+	}
+
 	return database.DatabaseConnection{
 		User:         os.Getenv("DB_USER"),
 		Password:     os.Getenv("DB_PASSWORD"),
 		DatabaseName: os.Getenv("DB_NAME"),
+		Port:         port,
+		Host:         os.Getenv("DB_HOST"),
 	}
 }

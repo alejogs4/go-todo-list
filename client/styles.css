@@ -1,0 +1,18 @@
+.container {
+  display: flex;
+  width: 100%;
+}
+
+.form_container {
+  flex: 1;
+  padding: 20px;
+  border: 1px solid black;
+}
+
+.todo-item {
+  display: flex;
+}
+
+.todo-content {
+  flex: 1;
+}

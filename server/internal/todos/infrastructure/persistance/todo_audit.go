@@ -51,14 +51,18 @@ func (t TodoAuditRepositoryDecorator) Update(ctx context.Context, todoID string,
 	}
 
 	action := updateAction
-	if todo.Completed && oldTodo != nil && !oldTodo.Completed {
-		action = completeAction
+	if oldTodo != nil && oldTodo.Completed != todo.Completed {
+		if todo.Completed {
+			action = completeAction
+		} else {
+			action = unCompleteAction
+		}
 	}
 
 	audit := TodoAudit{
 		TodoID:      todo.ID,
 		Action:      action,
-		Description: buildActionDescription(updateAction, todo, oldTodo),
+		Description: buildActionDescription(action, todo, oldTodo),
 		CreatedAt:   time.Now(),
 	}
 	if err = t.todoAuditRepository.Create(ctx, audit); err != nil {
@@ -83,6 +87,7 @@ func (t TodoAuditRepositoryDecorator) Delete(ctx context.Context, todoID string)
 		TodoID:      todoID,
 		Action:      deleteAction,
 		Description: buildActionDescription(deleteAction, removedTodo[0], nil),
+		CreatedAt:   time.Now(),
 	}
 	if err = t.todoAuditRepository.Create(ctx, audit); err != nil {
 		t.logger.Printf("Error creating audit record: %v for delete", err)
@@ -106,10 +111,11 @@ func (t TodoAuditRepositoryDecorator) findTodoByID(ctx context.Context, id strin
 
 func buildActionDescription(action string, todo domain.Todo, oldTodo *domain.Todo) string {
 	actionMessages := map[string]string{
-		"CREATE":   "Todo with title %s created at %s",
-		"UPDATE":   "Todo title changed to %s updated at %s",
-		"DELETE":   "Todo with title %s deleted at %s",
-		"COMPLETE": "Todo with title %s completed at %s",
+		"CREATE":     "Todo with title %s created at %s",
+		"UPDATE":     "Todo title changed from %s updated at %s to %s",
+		"DELETE":     "Todo with title %s deleted at %s",
+		"COMPLETE":   "Todo with title %s completed at %s",
+		"UNCOMPLETE": "Todo with title %s uncompleted at %s",
 	}
 
 	message, ok := actionMessages[action]
@@ -117,10 +123,23 @@ func buildActionDescription(action string, todo domain.Todo, oldTodo *domain.Tod
 		return fmt.Sprintf("Unknown action %s over todo with title %s", action, todo.Title)
 	}
 
-	oldTodoTitle := "unknown"
+	oldTitle := ""
 	if oldTodo != nil {
-		oldTodoTitle = oldTodo.Title
+		oldTitle = oldTodo.Title
 	}
 
-	return fmt.Sprintf(message, todo.Title, time.Now(), oldTodoTitle)
+	actionArgs := map[string][]any{
+		"CREATE":     {todo.Title, time.Now().Format(time.DateTime)},
+		"UPDATE":     {oldTitle, time.Now().Format(time.DateTime), todo.Title},
+		"DELETE":     {todo.Title, time.Now().Format(time.DateTime)},
+		"COMPLETE":   {todo.Title, time.Now().Format(time.DateTime)},
+		"UNCOMPLETE": {todo.Title, time.Now().Format(time.DateTime)},
+	}
+
+	args, ok := actionArgs[action]
+	if !ok {
+		return fmt.Sprintf("Unknown action %s over todo with title %s", action, todo.Title)
+	}
+
+	return fmt.Sprintf(message, args...)
 }

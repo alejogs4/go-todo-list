@@ -8,6 +8,7 @@ import (
 )
 
 type DatabaseConnection struct {
+	Host         string
 	User         string
 	Password     string
 	DatabaseName string
@@ -15,7 +16,7 @@ type DatabaseConnection struct {
 }
 
 func GenerateDatabaseConnection(params DatabaseConnection) (*sql.DB, error) {
-	connectionString := fmt.Sprintf("postgresql://%s:%s@%d/%s?sslmode=disable", params.User, params.Password, params.Port, params.DatabaseName)
+	connectionString := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", params.Host, params.Port, params.User, params.Password, params.DatabaseName)
 	db, err := sql.Open("postgres", connectionString)
 	if err != nil {
 		return nil, err

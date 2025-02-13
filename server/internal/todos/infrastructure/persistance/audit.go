@@ -16,15 +16,17 @@ type TodoAudit struct {
 }
 
 const (
-	createAction   = "CREATE"
-	updateAction   = "UPDATE"
-	deleteAction   = "DELETE"
-	completeAction = "COMPLETE"
+	createAction     = "CREATE"
+	updateAction     = "UPDATE"
+	deleteAction     = "DELETE"
+	completeAction   = "COMPLETE"
+	unCompleteAction = "UNCOMPLETE"
 )
 
 var (
 	ErrNotFoundAudit = errors.New("audit not found")
 	ErrGettingAudit  = errors.New("error getting audit")
+	ErrCreatingAudit = errors.New("error creating audit")
 )
 
 //go:generate moq -out todo_audit_mock.go . AuditRepository
@@ -43,29 +45,31 @@ func NewPostgresAuditRepository(db *sql.DB) PostgresAuditRepository {
 }
 
 func (p PostgresAuditRepository) Create(ctx context.Context, todo TodoAudit) error {
-	_, err := p.db.ExecContext(
+	if _, err := p.db.ExecContext(
 		ctx,
-		"INSERT INTO todo_audit (todo_id, action, description, created_at) VALUES ($1, $2, $3, $4);",
+		"INSERT INTO todos_audit (todo_id, action, description, created_at) VALUES ($1, $2, $3, $4);",
 		todo.TodoID,
 		todo.Action,
 		todo.Description,
 		todo.CreatedAt,
-	)
+	); err != nil {
+		return ErrCreatingAudit
+	}
 
-	return err
+	return nil
 }
 
 func (p PostgresAuditRepository) GetByID(ctx context.Context, id int) (TodoAudit, error) {
 	var todoAudit TodoAudit
 
-	row := p.db.QueryRowContext(ctx, "SELECT id, todo_id, action, description, created_at FROM todo_audit WHERE id = $1;", id)
+	row := p.db.QueryRowContext(ctx, "SELECT id, todo_id, action, description, created_at FROM todos_audit WHERE id = $1;", id)
 	err := row.Scan(&todoAudit.ID, &todoAudit.TodoID, &todoAudit.Action, &todoAudit.Description, &todoAudit.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return TodoAudit{}, ErrNotFoundAudit
 		}
 
-		return TodoAudit{}, err
+		return TodoAudit{}, ErrGettingAudit
 	}
 
 	return todoAudit, nil
@@ -74,13 +78,13 @@ func (p PostgresAuditRepository) GetByID(ctx context.Context, id int) (TodoAudit
 func (p PostgresAuditRepository) GetAll(ctx context.Context) ([]TodoAudit, error) {
 	var todos []TodoAudit
 
-	rows, err := p.db.QueryContext(ctx, "SELECT id, todo_id, action, description, created_at FROM todo_audit;")
+	rows, err := p.db.QueryContext(ctx, "SELECT id, todo_id, action, description, created_at FROM todos_audit ORDER BY created_at DESC;")
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFoundAudit
 		}
 
-		return nil, err
+		return nil, ErrGettingAudit
 	}
 
 	for rows.Next() {

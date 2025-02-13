@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"go-todo-list.com/m/internal/todos/domain"
 )
@@ -76,7 +77,7 @@ func (t TodosPostgresRepository) Update(ctx context.Context, todoID string, todo
 		"UPDATE todos SET title = $1, completed = $2, updated_at = $3, completed_at = $4 WHERE id = $5;",
 		todo.Title,
 		todo.Completed,
-		todo.UpdatedAt,
+		time.Now(),
 		todo.CompletedAt,
 		todoID,
 	); err != nil {

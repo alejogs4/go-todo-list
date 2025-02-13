@@ -1,0 +1,45 @@
+services:
+  app:
+    image: golang:latest
+    container_name: go_app
+    working_dir: /usr/src/app
+    volumes:
+      - ./server:/usr/src/app
+    command: go run main.go
+    depends_on:
+      - database
+    environment:
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_USER: user
+      DB_PASSWORD: password
+      DB_NAME: todosdb
+      HTTP_PORT: 8080
+    ports:
+      - "8080:8080"
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx_server
+    volumes:
+      - ./client:/usr/share/nginx/html
+    ports:
+      - "80:80"
+    depends_on:
+      - app
+
+  database:
+    image: postgres:latest
+    container_name: postgres_database
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: todosdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - todos_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+
+volumes:
+  todos_data:
